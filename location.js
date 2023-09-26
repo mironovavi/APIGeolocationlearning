@@ -1,71 +1,165 @@
 "use strict"
 
+var watchId = null;
+var map = null;
+var ourCoords = {
+    latitude: 47.624851,
+    longitude: -122.52099
+};
+var prevCoords = null;
+
 window.onload = getMyLocation;
 
-let wickedlyCoordinates = {
-    latitude: 47.624851,
-    longtidude: -122.520099
-};
+function getMyLocation() {
+    if (navigator.geolocation) {
 
-//функция возвращает расстояние между двумя координатами
-function computeDistance(startCoodes, destCoodes){
-    let startlatRads = degreesToRadiants(startCoodes.latitude);
-    let startLongRads = degreesToRadiants(startCoodes.longtidude);
-    let destlatRads = degreesToRadiants(destCoodes.latitude);
-    let destLongRads = degreesToRadiants(destCoodes.longtidude);
+        navigator.geolocation.getCurrentPosition(displayLocation, displayError,
+            { enableHighAccuracy: true, timeout: 9000 });
 
-    let radius = 6371;//радиус земли в км
-    let distance = Math.acos(Math.sin(startlatRads) * Math.sin(destlatRads) +
-    Math.cos(startlatRads) * Math.cos(destlatRads) * Math.cos(startLongRads - destLongRads)) * radius;
+        var watchButton = document.getElementById("watch");
+        watchButton.onclick = watchLocation;
+        var clearWatchButton = document.getElementById("clearWatch");
+        clearWatchButton.onclick = clearWatch;
+    }
+    else {
+        alert("Oops, no geolocation support");
+    }
+}
+
+function displayLocation(position) {
+    var latitude = position.coords.latitude;
+    var longitude = position.coords.longitude;
+
+    var div = document.getElementById("location");
+    div.innerHTML = "You are at Latitude: " + latitude + ", Longitude: " + longitude;
+    div.innerHTML += " (with " + position.coords.accuracy + " meters accuracy)";
+
+    var km = computeDistance(position.coords, ourCoords);
+    var distance = document.getElementById("distance");
+    distance.innerHTML = "You are " + km + " km from the WickedlySmart HQ";
+
+    // if (map == null) {
+    //     showMap(position.coords);
+    //     prevCoords = position.coords;
+    // }
+    // else {
+    //     var meters = computeDistance(position.coords, prevCoords) * 1000;
+    //     if (meters > 20) {
+    //         scrollMapToPosition(position.coords);
+    //         prevCoords = position.coords;
+    //     }
+    // }
+}
+
+
+function computeDistance(startCoords, destCoords) {
+    var startLatRads = degreesToRadians(startCoords.latitude);
+    var startLongRads = degreesToRadians(startCoords.longitude);
+    var destLatRads = degreesToRadians(destCoords.latitude);
+    var destLongRads = degreesToRadians(destCoords.longitude);
+
+    var Radius = 6371; // radius of the Earth in km
+    var distance = Math.acos(Math.sin(startLatRads) * Math.sin(destLatRads) +
+        Math.cos(startLatRads) * Math.cos(destLatRads) *
+        Math.cos(startLongRads - destLongRads)) * Radius;
 
     return distance;
 }
 
-function degreesToRadiants(degreees){
-    let radians = (degreees + Math.PI)/180;
+function degreesToRadians(degrees) {
+    radians = (degrees * Math.PI) / 180;
     return radians;
 }
 
 
-//проверяем поддерживает ли браузер API-интерфейс geolocation 
-function getMyLocation(){
-    if(navigator.geolocation){
-        //есть браузер поддерживает вызывается функция обработчик
-        navigator.geolocation.getCurrentPosition(displayLocation, displayError);
-    }else{
-        alert("Ops, no geolocation support");
-    }
-}
+// function showMap(coords) {
+// 	var googleLatAndLong = new google.maps.LatLng(coords.latitude, 
+// 												  coords.longitude);
+// 	var mapOptions = {
+// 		zoom: 10,
+// 		center: googleLatAndLong,
+// 		mapTypeId: google.maps.MapTypeId.ROADMAP
+// 	};
+// 	var mapDiv = document.getElementById("map");
+// 	map = new google.maps.Map(mapDiv, mapOptions);
+
+// 	// add the user marker
+// 	var title = "Your Location";
+// 	var content = "You are here: " + coords.latitude + ", " + coords.longitude;
+// 	addMarker(map, googleLatAndLong, title, content);
+
+// /*
+// 	// add the WickedlySmart HQ marker
+// 	var wsLatLong = new google.maps.LatLng(
+// 							ourCoords.latitude, 
+// 							ourCoords.longitude);
+// 	addMarker(map, wsLatLong, "WickedlySmart HQ", 
+// 							"WickedlySmart HQ latitude: " + 
+// 							ourCoords.latitude + 
+// 							", longitude: " +
+// 							ourCoords.longitude);
+// */
+// }
+
+// function addMarker(map, latlong, title, content) {
+// 	var markerOptions = {
+// 		position: latlong,
+// 		map: map,
+// 		title: title,
+// 		clickable: true
+// 	};
+// 	var marker = new google.maps.Marker(markerOptions);
+
+// 	var infoWindowOptions = {
+// 		content: content,
+// 		position: latlong
+// 	};
+
+// 	var infoWindow = new google.maps.InfoWindow(infoWindowOptions);
+
+// 	google.maps.event.addListener(marker, 'click', function() {
+// 		infoWindow.open(map);
+// 	});
+// }
 
 
-//получает данные о позиции(широту/долготу)
-function displayLocation(position, errorHandler, options){
-    let latitude = position.coords.latitude;
-    let longtidude = position.coords.longtidude;
-
-    let div = document.getElementById("location");
-    div.innerHTML = "You are at Latitude: " + latitude + ", longtidude: " + longtidude;
-
-    let km = computeDistance(position.coords, wickedlyCoordinates);
-    let distance = document.getElementById("distance");
-    distance.innerHTML = "You are " + km + "km from Wickedly Office";
-}
-
-function displayError(error){
-    let errorTypes = {
+function displayError(error) {
+    var errorTypes = {
         0: "Unknown error",
-        1: "Permission denied by user",
+        1: "Permission denied",
         2: "Position is not available",
-        3: "Request timed out"
+        3: "Request timeout"
     };
-
-    let errorMessage = errorTypes[error.code];
-
-    if(error.code){
-        errorMessage = `${errorMessage} ${error.message}`
+    var errorMessage = errorTypes[error.code];
+    if (error.code == 0 || error.code == 2) {
+        errorMessage = errorMessage + " " + error.message;
     }
-
-    let div = document.getElementById("location");
+    var div = document.getElementById("location");
     div.innerHTML = errorMessage;
+}
+
+
+function watchLocation() {
+    watchId = navigator.geolocation.watchPosition(displayLocation, displayError,
+        { enableHighAccuracy: true, timeout: 3000 });
+}
+
+// function scrollMapToPosition(coords) {
+// 	var latitude = coords.latitude;
+// 	var longitude = coords.longitude;
+
+// 	var latlong = new google.maps.LatLng(latitude, longitude);
+// 	map.panTo(latlong);
+
+// 	// add the new marker
+// 	addMarker(map, latlong, "Your new location", "You moved to: " + 
+// 								latitude + ", " + longitude);
+// }
+
+function clearWatch() {
+    if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
 }
 
